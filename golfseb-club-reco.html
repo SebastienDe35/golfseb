@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Recommandation de clubs</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 1em; }
+    input[type="file"] { margin-bottom: 1em; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+    th { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h2>Importe ton fichier Excel</h2>
+  <input type="file" id="inputFile" accept=".xlsx" />
+  <div id="result"></div>
+
+  <script>
+    document.getElementById('inputFile').addEventListener('change', function (e) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets["Synthèse"] || workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        const filtered = json.slice(1).filter(row => row[3] !== undefined && !isNaN(row[3]));
+        filtered.sort((a, b) => a[3] - b[3]);
+
+        let recommendations = [];
+        for (let d = 0; d <= 200; d++) {
+          let club = "Aucun club adapté";
+          for (let i = 0; i < filtered.length; i++) {
+            if (filtered[i][3] >= d) {
+              club = filtered[i][0];
+              break;
+            }
+          }
+          recommendations.push([d, club]);
+        }
+
+        let html = '<h3>Recommandation de clubs (0 à 200 m)</h3>';
+        html += '<table><tr><th>Distance (m)</th><th>Club recommandé</th></tr>';
+        recommendations.forEach(r => {
+          html += `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`;
+        });
+        html += '</table>';
+        document.getElementById('result').innerHTML = html;
+      };
+      reader.readAsArrayBuffer(e.target.files[0]);
+    });
+  </script>
+</body>
+</html>
